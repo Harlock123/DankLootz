@@ -9,8 +9,8 @@ var tile_size = 64  # size of a tile in the TileMap
 var num_rooms = 50  # number of rooms to generate
 var min_size = 6  # minimum room size (in tiles)
 var max_size = 15  # maximum room size (in tiles)
-var hspread = 400  # horizontal spread (in pixels)
-var cull = 0.5  # chance to cull room
+var hspread = 4000  # horizontal spread (in pixels)
+var cull = 0.3  # chance to cull room
 
 var path  # AStar pathfinding object
 var start_room = null
@@ -23,11 +23,42 @@ func _ready():
 	make_rooms()
 	
 func make_rooms():
+	
+	var trooms = []
+	
 	for i in range(num_rooms):
-		var pos = Vector2(rand_range(-hspread, hspread), 0)
+		var roomplaced = false
+		while not roomplaced:
+			var xx = floor(rand_range(-hspread, hspread)/tile_size)
+			var yy = floor(rand_range(-hspread,hspread)/tile_size)
+			var xs = floor(rand_range(min_size,max_size))
+			var ys = floor(rand_range(min_size,max_size))
+			
+			var overlap = false
+			var pendingroomrect = Rect2(xx,yy,xs,ys)
+			for ii in range(trooms.size()):
+				if pendingroomrect.intersects(trooms[ii],true):
+					overlap = true
+			
+			if not overlap:
+				trooms.append(pendingroomrect)
+				roomplaced = true
+	
+	
+	for i in range(num_rooms):
+		
+		var prect : Rect2 = trooms[i]
+		
+		var pos = Vector2(prect.position.x * tile_size,prect.position.y * tile_size)
 		var r = Room.instance()
-		var w = min_size + randi() % (max_size - min_size)
-		var h = min_size + randi() % (max_size - min_size)
+		var w = prect.size.x
+		var h = prect.size.y
+		
+		
+#		var pos = Vector2(rand_range(-hspread, hspread), 0)
+#		var r = Room.instance()
+#		var w = min_size + randi() % (max_size - min_size)
+#		var h = min_size + randi() % (max_size - min_size)
 		r.make_room(pos, Vector2(w, h) * tile_size)
 		$Rooms.add_child(r)
 	# wait for movement to stop
@@ -42,6 +73,9 @@ func make_rooms():
 			room_positions.append(Vector3(room.position.x,
 										  room.position.y, 0))
 	yield(get_tree(), 'idle_frame')
+	
+	#print(room_positions)
+	
 	# generate a minimum spanning tree connecting the rooms
 	path = find_mst(room_positions)
 			
